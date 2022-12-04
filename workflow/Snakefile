@@ -1,0 +1,33 @@
+configfile: "workflow/config.yaml"
+
+rule all:
+    input:
+        "data/processed/data_featured.csv",
+        "data/interim/data_cleaned.csv",
+        "data/interim/data_regional.csv"
+
+rule add_features:
+    input:
+        "data/interim/data_cleaned.csv"
+    output:
+        "data/processed/data_featured.csv"
+    shell:
+        "python -m src.features.add_features {input} {output}"
+
+rule clean_data:
+    input:
+        "data/interim/data_regional.csv"
+    output:
+        "data/interim/data_cleaned.csv"
+    shell:
+        "python -m src.data.clean_data {input} {output}"
+
+rule select_region:
+    input:
+        "data/raw/all_v2.csv"
+    output:
+        "data/interim/data_regional.csv"
+    shell:
+        "python -m src.data.select_region {input} {output} 2661"
+
+
