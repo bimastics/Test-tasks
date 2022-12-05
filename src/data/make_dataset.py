@@ -27,8 +27,8 @@ def clear_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @click.command()
-@click.argument('file_df', type=click.Path(exists=True))
-@click.argument('file_feat', type=click.Path(exists=True))
+@click.argument('file_df', type=click.Path(exists=False))
+@click.argument('file_feat', type=click.Path(exists=False))
 @click.argument('output_filepath', type=click.Path())
 def make_dataset(file_df: str, file_feat: str, output_filepath: str):
     """ Runs data processing scripts to turn raw data from (../raw) into
@@ -43,7 +43,7 @@ def make_dataset(file_df: str, file_feat: str, output_filepath: str):
     # Clear Data
     df = merge_csv(df, feat)
     df = clear_data(df)
-    df.to_csv(output_filepath)
+    df.to_csv(output_filepath, index=False)
 
 
 if __name__ == '__main__':

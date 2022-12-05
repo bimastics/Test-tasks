@@ -25,7 +25,8 @@ class CreateFeatures:
         self.kmeans_10.fit(X)
         self.kmeans_3 = KMeans(n_clusters=3, random_state=33)
         self.kmeans_3.fit(X)
-        self.use_features = self.drop_features(X, df['who_win'])
+        self.is_train = True
+        self.use_features = None
 
     @staticmethod
     def fit_col_tf_data(df: pd.DataFrame) -> ColumnTransformer:
@@ -49,19 +50,19 @@ class CreateFeatures:
         components = tsne.fit_transform(df)
         return pd.DataFrame(data=components, columns=['component_' + str(i) for i in range(1, n + 1)])
 
-    @staticmethod
-    def drop_features(X: pd.DataFrame, y: pd.Series) -> np.array:
+    def drop_features(self, df: pd.DataFrame, y: pd.Series) -> np.array:
         searcher = GridSearchCV(Lasso(), [{"alpha": np.logspace(-4, -2, 25)}],
                                 scoring="roc_auc", cv=10, n_jobs=-1)
-        searcher.fit(X, y)
-        model = Lasso(alpha=searcher.best_params_["alpha"]).fit(X, y)
-        return X.columns[model.coef_ != 0]
+        searcher.fit(df, y)
+        model = Lasso(alpha=searcher.best_params_["alpha"]).fit(df, y)
+        self.is_train = False
+        self.use_features = df.columns[model.coef_ != 0].to_list() + ['who_win']
 
     def create_new_feat(self, df: pd.DataFrame) -> pd.DataFrame:
-        y = df['who_win'].values
+        y = df[['who_win']]
         X = df.drop(columns=(['who_win']), axis=1)
-        X = self.col_tf.transform(X)
-        pd.DataFrame(self.col_tf.transform(df), columns=self.col_tf.get_feature_names_out())
+        # X = self.col_tf.transform(X)
+        X = pd.DataFrame(self.col_tf.transform(X), columns=self.col_tf.get_feature_names_out())
 
         # Понижение размерности
         # components_3d_pca = self.reduce_dims_to_nd_space_with_pca(X, n=3)
@@ -76,12 +77,14 @@ class CreateFeatures:
         clusters_10_dummies = pd.get_dummies(labels_clast_10, drop_first=True, prefix='clusters_10')
 
         df_ext = pd.concat([X, components_3d_tsne, clusters_3_dummies,
-                            clusters_10_dummies, pd.Series(y)], axis=1)
+                            clusters_10_dummies, y], axis=1)
+        if self.is_train:
+            self.drop_features(df_ext.drop(columns=(['who_win']), axis=1), df_ext['who_win'])
         return df_ext[self.use_features]
 
 
 @click.command()
-@click.argument('file_df', type=click.Path(exists=True))
+@click.argument('file_df', type=click.Path())
 @click.argument('output_filepath', type=click.Path())
 @click.argument('type', type=click.STRING)
 def build_features(file_df: str, output_filepath: str, type: str = 'train'):
