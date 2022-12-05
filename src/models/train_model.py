@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
-import click
+import os
+import pickle
 import logging
+import click
 import pandas as pd
 import numpy as np
-import joblib as jb
 from pathlib import Path
 from typing import List
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
+
+
 
 
 @click.command()
@@ -26,7 +29,9 @@ def train(input_paths: List[str], output_path: str):
                             scoring="roc_auc", cv=10, n_jobs=-1)
     searcher.fit(x_train, y_train)
     logreg = LogisticRegression(penalty='l2', solver='liblinear', C=searcher.best_params_["C"])
-    jb.dump(logreg, output_path)
+    logreg.fit(x_train, y_train)
+    with open(Path(os.getcwd(), output_path), 'wb') as f:
+        pickle.dump(logreg, f)
 
 
 if __name__ == '__main__':

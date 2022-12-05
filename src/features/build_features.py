@@ -86,13 +86,13 @@ class CreateFeatures:
         if self.is_train:
             self.drop_features(df_ext.drop(columns=(['who_win']), axis=1), df_ext['who_win'])
             self.is_train = False
-        return df_ext[self.use_features]
+        return df_ext[self.use_features + ['scaling__index']]
 
 
-# @click.command()
-# @click.argument('file_df', type=click.Path())
-# @click.argument('output_filepath', type=click.Path())
-# @click.argument('type', type=click.STRING)
+@click.command()
+@click.argument('file_df', type=click.Path())
+@click.argument('output_filepath', type=click.Path())
+@click.argument('type', type=click.STRING)
 def build_features(file_df: str, output_filepath: str, type: str = 'train'):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
@@ -104,14 +104,14 @@ def build_features(file_df: str, output_filepath: str, type: str = 'train'):
     df = pd.read_csv(file_df)
     if type == 'train':
         generator = CreateFeatures(df)
-        # with open(Path(os.getcwd(), 'models/features.pickle'), 'wb') as f:
+        # with open(Path(os.getcwd(), 'models/features.pkl'), 'wb') as f:
         #     pickle.dump(generator, f)
     elif type == 'transform':
-        # with open(Path(os.getcwd(), 'models/features.pickle'), 'rb') as f:
+        # with open(Path(os.getcwd(), 'models/features.pkl'), 'rb') as f:
         #     generator = pickle.load(f)
         generator = jb.load("models/features.pickle")
 
-    generator.create_new_feat(df, type=type).to_csv(output_filepath)
+    generator.create_new_feat(df, type=type).to_csv(output_filepath, index=False)
     if type == 'train':
         jb.dump(generator, "models/features.pickle")
 

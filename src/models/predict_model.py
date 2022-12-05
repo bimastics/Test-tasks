@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
+import os
+import pickle
 import click
 import logging
 import pandas as pd
-import joblib as jb
 from typing import List
 from pathlib import Path
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import mean_absolute_error, mean_squared_error, roc_auc_score
 
-USE_COLUMNS = ['index', 'map_id', 'map_name']
+USE_COLUMNS = ['scaling__index', 'who_win']
 
 
 @click.command()
@@ -16,8 +15,8 @@ USE_COLUMNS = ['index', 'map_id', 'map_name']
 @click.argument("output_path", type=click.Path())
 def predict_model(input_paths: List[str], output_path: str):
     test_df = pd.read_csv(input_paths[0])
-    model = jb.load(input_paths[1])
-    print(model.__dict__)
+    with open(Path(os.getcwd(), input_paths[1]), 'rb') as f:
+        model = pickle.load(f)
 
     # x_holdout = test_df.drop('who_win', axis=1)
     # y_holdout = test_df['who_win']
@@ -32,9 +31,9 @@ def predict_model(input_paths: List[str], output_path: str):
     #     index=[0],
     # )
     # score.to_csv(output_path[1], index=False)
-    # y_predicted = model.predict(test_df)
-    test_df.to_csv(output_path, index=False)
-    print(1)
+    y_predicted = model.predict(test_df)
+    test_df['who_win'] = y_predicted
+    test_df[USE_COLUMNS].to_csv(output_path, index=False)
 
 
 if __name__ == '__main__':
