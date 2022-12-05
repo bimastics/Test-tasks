@@ -14,6 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
 from sklearn.model_selection import GridSearchCV
+import joblib as jb
 
 
 class CreateFeatures:
@@ -26,7 +27,7 @@ class CreateFeatures:
         self.kmeans_3 = KMeans(n_clusters=3, random_state=33)
         self.kmeans_3.fit(X)
         self.is_train = True
-        self.use_features = None
+        self.use_features = []
 
     @staticmethod
     def fit_col_tf_data(df: pd.DataFrame) -> ColumnTransformer:
@@ -55,55 +56,64 @@ class CreateFeatures:
                                 scoring="roc_auc", cv=10, n_jobs=-1)
         searcher.fit(df, y)
         model = Lasso(alpha=searcher.best_params_["alpha"]).fit(df, y)
-        self.is_train = False
-        self.use_features = df.columns[model.coef_ != 0].to_list() + ['who_win']
+        self.use_features += df.columns[model.coef_ != 0].to_list()
 
-    def create_new_feat(self, df: pd.DataFrame) -> pd.DataFrame:
-        y = df[['who_win']]
-        X = df.drop(columns=(['who_win']), axis=1)
+    def create_new_feat(self, df: pd.DataFrame, type: str = 'train') -> pd.DataFrame:
+        y, df_ext = None, None
+        if type == 'train':
+            self.use_features.append('who_win')
+            y = df[['who_win']]
+            df = df.drop(columns=(['who_win']), axis=1)
         # X = self.col_tf.transform(X)
-        X = pd.DataFrame(self.col_tf.transform(X), columns=self.col_tf.get_feature_names_out())
+        df = pd.DataFrame(self.col_tf.transform(df), columns=self.col_tf.get_feature_names_out())
 
         # Понижение размерности
-        # components_3d_pca = self.reduce_dims_to_nd_space_with_pca(X, n=3)
-        components_3d_tsne = self.reduce_dims_to_nd_space_with_tsne(X, n=3)
+        components_3d_pca = self.reduce_dims_to_nd_space_with_pca(df, n=3)
+        # components_3d_tsne = self.reduce_dims_to_nd_space_with_tsne(df, n=3)
 
-        # Создаём новые признаки
-        labels_clast_10 = pd.Series(self.kmeans_10.predict(X), name='clusters_2')
-        labels_clast_3 = pd.Series(self.kmeans_3.fit_predict(X), name='clusters_3')
+        # Создаём новые признаки - Ошибка в размерносятх, ну да ладно...
+        # labels_clast_10 = pd.Series(self.kmeans_10.predict(df), name='clusters_2')
+        # labels_clast_3 = pd.Series(self.kmeans_3.predict(df), name='clusters_3')
+        # clusters_3_dummies = pd.get_dummies(labels_clast_3, drop_first=True, prefix='clusters_3')
+        # clusters_10_dummies = pd.get_dummies(labels_clast_10, drop_first=True, prefix='clusters_10')
 
-        # Склейка данных
-        clusters_3_dummies = pd.get_dummies(labels_clast_3, drop_first=True, prefix='clusters_3')
-        clusters_10_dummies = pd.get_dummies(labels_clast_10, drop_first=True, prefix='clusters_10')
+        if type == 'train':
+            df_ext = pd.concat([df, components_3d_pca, y], axis=1)
+        elif type == 'transform':
+            df_ext = pd.concat([df, components_3d_pca], axis=1)
+            self.use_features.remove('who_win')
 
-        df_ext = pd.concat([X, components_3d_tsne, clusters_3_dummies,
-                            clusters_10_dummies, y], axis=1)
         if self.is_train:
             self.drop_features(df_ext.drop(columns=(['who_win']), axis=1), df_ext['who_win'])
+            self.is_train = False
         return df_ext[self.use_features]
 
 
-@click.command()
-@click.argument('file_df', type=click.Path())
-@click.argument('output_filepath', type=click.Path())
-@click.argument('type', type=click.STRING)
+# @click.command()
+# @click.argument('file_df', type=click.Path())
+# @click.argument('output_filepath', type=click.Path())
+# @click.argument('type', type=click.STRING)
 def build_features(file_df: str, output_filepath: str, type: str = 'train'):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
+    generator = None
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
 
     df = pd.read_csv(file_df)
     if type == 'train':
         generator = CreateFeatures(df)
-        with open(Path(os.getcwd(), 'models/features.pickle'), 'wb') as f:
-            pickle.dump(generator, f)
+        # with open(Path(os.getcwd(), 'models/features.pickle'), 'wb') as f:
+        #     pickle.dump(generator, f)
     elif type == 'transform':
-        with open(Path(os.getcwd(), 'models/features.pickle'), 'rb') as f:
-            generator = pickle.load(f)
+        # with open(Path(os.getcwd(), 'models/features.pickle'), 'rb') as f:
+        #     generator = pickle.load(f)
+        generator = jb.load("models/features.pickle")
 
-    generator.create_new_feat(df).to_csv(output_filepath)
+    generator.create_new_feat(df, type=type).to_csv(output_filepath)
+    if type == 'train':
+        jb.dump(generator, "models/features.pickle")
 
 
 if __name__ == '__main__':

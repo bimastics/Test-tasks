@@ -14,9 +14,10 @@ USE_COLUMNS = ['index', 'map_id', 'map_name']
 @click.command()
 @click.argument("input_paths", type=click.Path(exists=True), nargs=2)
 @click.argument("output_path", type=click.Path())
-def predcit_model(input_paths: List[str], output_path: str):
+def predict_model(input_paths: List[str], output_path: str):
     test_df = pd.read_csv(input_paths[0])
     model = jb.load(input_paths[1])
+    print(model.__dict__)
 
     # x_holdout = test_df.drop('who_win', axis=1)
     # y_holdout = test_df['who_win']
@@ -31,8 +32,9 @@ def predcit_model(input_paths: List[str], output_path: str):
     #     index=[0],
     # )
     # score.to_csv(output_path[1], index=False)
-    y_predicted = model.predict(test_df)
-    y_predicted.to_csv(output_path, index=False)
+    # y_predicted = model.predict(test_df)
+    test_df.to_csv(output_path, index=False)
+    print(1)
 
 
 if __name__ == '__main__':
@@ -46,4 +48,4 @@ if __name__ == '__main__':
     # load up the .env entries as environment variables
     # load_dotenv(find_dotenv())
 
-    predcit_model("data/processed/test.csv", "models/model.clf", "data/predicts/test_out.csv")
+    predict_model()

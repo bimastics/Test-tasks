@@ -1,14 +1,15 @@
 configfile: "workflow/config.yaml"
 
+# "reports/scores.csv",
 rule all:
     input:
         "data/processed/data_features.csv",
         "data/interim/make_dataset.csv",
+        "data/interim/test.csv",
         "data/processed/test.csv",
         "data/processed/train.csv",
         "data/processed/valid.csv",
         "models/model.clf",
-        # "reports/scores.csv",
         "data/predicts/test_out.csv"
 
 rule predict_model:
@@ -16,7 +17,6 @@ rule predict_model:
         "data/processed/test.csv",
         "models/model.clf"
     output:
-        # "reports/scores.csv",
         "data/predicts/test_out.csv"
     shell:
         "python -m src.models.predict_model {input} {output}"
@@ -29,6 +29,7 @@ rule train_model:
         "models/model.clf"
     shell:
         "python -m src.models.train_model {input} {output}"
+
 #
 rule prepare_datasets:
     input:
@@ -38,14 +39,17 @@ rule prepare_datasets:
         "data/processed/valid.csv"
     shell:
         "python -m src.models.prepare_datasets {input} {output}"
+
 #
 rule build_features:
     input:
-        "data/interim/make_dataset.csv"
+        "data/interim/make_dataset.csv",
+        "data/interim/test.csv"
     output:
-        "data/processed/data_features.csv"
+        "data/processed/data_features.csv",
+        "data/processed/test.csv"
     shell:
-        "python -m src.features.build_features {input} {output} train"
+        "python -m src.features.build_features {input[0]} {output[0]} train & python -m src.features.build_features {input[1]} {output[1]} transform"
 
 rule make_dataset:
     input:
@@ -54,6 +58,6 @@ rule make_dataset:
         "data/raw/test.csv"
     output:
         "data/interim/make_dataset.csv",
-        "data/processed/test.csv"
+        "data/interim/test.csv"
     shell:
         "python -m src.data.make_dataset {input[0]} {input[1]} {output[0]} & python -m src.data.make_dataset {input[2]} {input[1]} {output[1]}"
