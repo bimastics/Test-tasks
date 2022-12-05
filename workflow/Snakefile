@@ -4,29 +4,56 @@ rule all:
     input:
         "data/processed/data_features.csv",
         "data/interim/make_dataset.csv",
+        "data/processed/test.csv",
+        "data/processed/train.csv",
+        "data/processed/valid.csv",
+        "models/model.clf",
+        # "reports/scores.csv",
+        "data/predicts/test_out.csv"
 
+rule predict_model:
+    input:
+        "data/processed/test.csv",
+        "models/model.clf"
+    output:
+        # "reports/scores.csv",
+        "data/predicts/test_out.csv"
+    shell:
+        "python -m src.models.predict_model {input} {output}"
+
+rule train_model:
+    input:
+        "data/processed/train.csv",
+        "data/processed/valid.csv"
+    output:
+        "models/model.clf"
+    shell:
+        "python -m src.models.train_model {input} {output}"
+#
 rule prepare_datasets:
     input:
-        "data/processed/data_features.csv",
+        "data/processed/data_features.csv"
     output:
         "data/processed/train.csv",
         "data/processed/valid.csv"
     shell:
         "python -m src.models.prepare_datasets {input} {output}"
-
+#
 rule build_features:
     input:
         "data/interim/make_dataset.csv"
     output:
         "data/processed/data_features.csv"
     shell:
-        "python -m src.features.build_features {input} {output}"
+        "python -m src.features.build_features {input} {output} train"
 
 rule make_dataset:
     input:
         "data/raw/train.csv",
-        "data/raw/players_feats.csv"
+        "data/raw/players_feats.csv",
+        "data/raw/test.csv"
     output:
-        "data/interim/make_dataset.csv"
+        "data/interim/make_dataset.csv",
+        "data/processed/test.csv"
     shell:
-        "python -m src.data.make_dataset {input[0]} {input[1]} {output}"
+        "python -m src.data.make_dataset {input[0]} {input[1]} {output[0]} & python -m src.data.make_dataset {input[2]} {input[1]} {output[1]}"

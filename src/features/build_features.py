@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+# from dotenv import find_dotenv, load_dotenv
 from sklearn.linear_model import Lasso
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -115,6 +115,6 @@ if __name__ == '__main__':
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
+    # load_dotenv(find_dotenv())
 
     build_features()
